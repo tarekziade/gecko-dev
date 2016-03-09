@@ -1161,9 +1161,7 @@ Blocklist.prototype = {
 
     for (let filter of EXTENSION_BLOCK_FILTERS) {
       // In Kinto, app `id` is `guid`.
-      if (filter == "id")
-        filter = "guid";
-      let attr = data[filter];
+      let attr = data[filter == "id" ? "guid" : filter];
       if (attr)
         blockEntry.attributes.set(filter, regExpCheck(attr));
     }
@@ -1180,7 +1178,7 @@ Blocklist.prototype = {
       }
       for(let targetApplication of versionRange.targetApplication)  {
         // default to the current application if id is not provided.
-        const appId = targetApplication.id || gApp.ID;
+        const appId = targetApplication.guid || gApp.ID;
         itemData.targetApps[appId] = targetApplication;
       }
       blockEntry.versions.push(itemData);
@@ -1242,7 +1240,7 @@ Blocklist.prototype = {
       }
       for(let targetApplication of versionRange.targetApplication)  {
         // default to the current application if id is not provided.
-        const appId = targetApplication.id || gApp.ID;
+        const appId = targetApplication.guid || gApp.ID;
         itemData.targetApps[appId] = targetApplication;
       }
       blockEntry.versions.push(itemData);
