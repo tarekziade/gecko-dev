@@ -329,6 +329,7 @@ Blocklist.prototype = {
    */
   _addonEntries: null,
   _pluginEntries: null,
+  _preloadedBlocklistContent: {},
 
   shutdown: function() {
     Services.obs.removeObserver(this, "xpcom-shutdown");
@@ -755,11 +756,10 @@ Blocklist.prototype = {
 
     let telemetry = Services.telemetry;
 
-    // XXX: preload addons/plugins json
     if (this._isBlocklistPreloaded()) {
       telemetry.getHistogramById("BLOCKLIST_SYNC_FILE_LOAD").add(false);
-      this._loadBlocklistFromString(this._preloadedBlocklistContent);
-      delete this._preloadedBlocklistContent;
+      this._loadBlocklistFromString(this._preloadedBlocklistContent[file.path]);
+      delete this._preloadedBlocklistContent[file.path];
       return;
     }
 
@@ -807,38 +807,18 @@ Blocklist.prototype = {
   },
 
   _isBlocklistPreloaded: function() {
-    return this._preloadedBlocklistContent != null;
+    return Object.keys(this._preloadedBlocklistContent).length > 0;
   },
 
   /* Used for testing */
   _clear: function() {
     this._addonEntries = null;
     this._pluginEntries = null;
-    this._preloadedBlocklistContent = null;
+    this._preloadedBlocklistContent = {};
   },
 
   _preloadBlocklist: Task.async(function*() {
-    let profPath = OS.Path.join(OS.Constants.Path.profileDir, FILE_BLOCKLIST);
-    try {
-      yield this._preloadBlocklistFile(profPath);
-      return;
-    } catch (e) {
-      LOG("Blocklist::_preloadBlocklist: Failed to load XML file " + e)
-    }
-
-    var appFile = FileUtils.getFile(KEY_APPDIR, [FILE_BLOCKLIST]);
-    try{
-      yield this._preloadBlocklistFile(appFile.path);
-      return;
-    } catch (e) {
-      LOG("Blocklist::_preloadBlocklist: Failed to load XML file " + e)
-    }
-
-    LOG("Blocklist::_preloadBlocklist: no XML File found");
-  }),
-
-  _preloadBlocklistFile: Task.async(function*(path){
-    if (this._addonEntries) {
+    if (this._isBlocklistLoaded()) {
       // The file has been already loaded.
       return;
     }
@@ -848,11 +828,37 @@ Blocklist.prototype = {
       return;
     }
 
+    var loadFromXML = getPref("getBoolPref", PREF_BLOCKLIST_VIA_AMO, true);
+    const paths = loadFromXML ? [ FILE_BLOCKLIST ]
+                              : [ 'blocklist-addons.json', 'blocklist-plugins.json' ];
+    for (let path of paths) {
+      let profPath = OS.Path.join(OS.Constants.Path.profileDir, path);
+      try {
+        yield this._preloadBlocklistFile(profPath);
+        return;
+      } catch (e) {
+        LOG("Blocklist::_preloadBlocklist: Failed to load file " + e)
+      }
+
+      var appFile = FileUtils.getFile(KEY_APPDIR, [path]);
+      try{
+        yield this._preloadBlocklistFile(appFile.path);
+        return;
+      } catch (e) {
+        LOG("Blocklist::_preloadBlocklist: Failed to load file " + e)
+      }
+
+      LOG("Blocklist::_preloadBlocklist: no file found");
+      return;
+    }
+  }),
+
+  _preloadBlocklistFile: Task.async(function*(path){
     let text = yield OS.File.read(path, { encoding: "utf-8" });
 
-    if (!this._addonEntries) {
+    if (!this._isBlocklistLoaded()) {
       // Store the content only if a sync load has not been performed in the meantime.
-      this._preloadedBlocklistContent = text;
+      this._preloadedBlocklistContent[path] = text;
     }
   }),
 
