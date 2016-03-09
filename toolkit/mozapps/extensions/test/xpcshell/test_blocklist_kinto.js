@@ -50,6 +50,13 @@ function Blocklist() {
 }
 
 
+function IBlocklist() {
+  let blocklist = AM_Cc["@mozilla.org/extensions/blocklist;1"].
+                  getService(AM_Ci.nsIBlocklistService);
+  return blocklist;
+}
+
+
 function run_test() {
   // Some blocklist code rely on gApp.ID.
   createAppInfo(TEST_APP_ID, "XPCShell", "1", "1");
@@ -168,6 +175,38 @@ add_task(function* test_plugin_entry_from_json_without_blockid() {
 });
 
 
+add_task(function* test_is_loaded_synchronously() {
+  const blocklist = Blocklist();
+  do_check_false(blocklist._isBlocklistLoaded());
+  blocklist.isAddonBlocklisted("addon", "appVersion", "toolkitVersion");
+  do_check_true(blocklist._isBlocklistLoaded());
+});
+
+
+add_task(function* test_relies_on_handle_json_methods() {
+  const blocklist = Blocklist();
+  const sample = {sentinel: true};
+  blocklist._handleAddonItemJSON = () => sample;
+  blocklist._handlePluginItemJSON = () => sample;
+
+  blocklist._loadBlocklist();
+
+  do_check_eq(blocklist._addonEntries[0], sample);
+  do_check_eq(blocklist._pluginEntries[0], sample);
+});
+
+
+// add_test(function* test_notify_does_not_download_xml_file() {
+//   const blocklist = IBlocklist();
+
+//   // XXX: This hangs!
+//   blocklist.notify();
+
+//   // When blocklist is managed via AMO, it is loaded on notify()
+//   // before being downloaded.
+//   do_check_false(blocklist._isBlocklistLoaded());
+// });
+
 // add_test(function* test_read_json_from_app_or_profile() {
 //   // addon in app  / plugins in app
 //   // addon in prof / plugins in app
@@ -178,9 +217,6 @@ add_task(function* test_plugin_entry_from_json_without_blockid() {
 // add_test(function* test_invalid_json() {
 // });
 
-// add_test(function* test_loads_addons_and_plugins_entries() {
-// });
-
 // add_test(function* preload_json_async() {
 //   // addon async / plugins sync
 //   // addon sync  / plugins sync
@@ -188,5 +224,3 @@ add_task(function* test_plugin_entry_from_json_without_blockid() {
 //   // addon sync  / plugins async
 // });
 
-// add_test(function* test_notify_does_not_download_xml_file() {
-// });
