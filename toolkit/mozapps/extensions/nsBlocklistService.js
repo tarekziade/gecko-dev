@@ -70,6 +70,7 @@ const EXTENSION_BLOCK_FILTERS = ["id", "name", "creator", "homepageURL", "update
 
 var gLoggingEnabled = null;
 var gBlocklistEnabled = true;
+var gBlocklistFromXML = true;
 var gBlocklistLevel = DEFAULT_LEVEL;
 
 XPCOMUtils.defineLazyServiceGetter(this, "gConsole",
@@ -301,6 +302,7 @@ function Blocklist() {
   Services.obs.addObserver(this, "sessionstore-windows-restored", false);
   gLoggingEnabled = getPref("getBoolPref", PREF_EM_LOGGING_ENABLED, false);
   gBlocklistEnabled = getPref("getBoolPref", PREF_BLOCKLIST_ENABLED, true);
+  gBlocklistFromXML = getPref("getBoolPref", PREF_BLOCKLIST_VIA_AMO, true);
   gBlocklistLevel = Math.min(getPref("getIntPref", PREF_BLOCKLIST_LEVEL, DEFAULT_LEVEL),
                                      MAX_BLOCK_LEVEL);
   gPref.addObserver("extensions.blocklist.", this, false);
@@ -517,6 +519,9 @@ Blocklist.prototype = {
     if (!gBlocklistEnabled)
       return;
 
+    if (!gBlocklistFromXML)
+      return;
+
     try {
       var dsURI = gPref.getCharPref(PREF_BLOCKLIST_URL);
     }
@@ -651,7 +656,7 @@ Blocklist.prototype = {
     this._addonEntries = [];
     this._pluginEntries = [];
 
-    this._loadBlocklistFromString(request.responseText);
+    this._loadBlocklistFromXMLString(request.responseText);
     this._blocklistUpdated(oldAddonEntries, oldPluginEntries);
 
     try {
@@ -692,20 +697,19 @@ Blocklist.prototype = {
     this._addonEntries = [];
     this._pluginEntries = [];
 
-    var loadFromXML = getPref("getBoolPref", PREF_BLOCKLIST_VIA_AMO, true);
-    if (loadFromXML) {
+    if (gBlocklistFromXML) {
       var profFile = FileUtils.getFile(KEY_PROFILEDIR, [FILE_BLOCKLIST]);
       if (profFile.exists()) {
         const text = this._loadBlocklistFromFile(profFile);
         if (text)
-          this._loadBlocklistFromString(text);
+          this._loadBlocklistFromXMLString(text);
         return;
       }
       var appFile = FileUtils.getFile(KEY_APPDIR, [FILE_BLOCKLIST]);
       if (appFile.exists()) {
         const text = this._loadBlocklistFromFile(appFile);
         if (text)
-          this._loadBlocklistFromString(text);
+          this._loadBlocklistFromXMLString(text);
         return;
       }
       LOG("Blocklist::_loadBlocklist: no XML File found");
@@ -758,7 +762,7 @@ Blocklist.prototype = {
 
     if (this._isBlocklistPreloaded()) {
       telemetry.getHistogramById("BLOCKLIST_SYNC_FILE_LOAD").add(false);
-      this._loadBlocklistFromString(this._preloadedBlocklistContent[file.path]);
+      this._loadBlocklistFromXMLString(this._preloadedBlocklistContent[file.path]);
       delete this._preloadedBlocklistContent[file.path];
       return;
     }
@@ -828,9 +832,8 @@ Blocklist.prototype = {
       return;
     }
 
-    var loadFromXML = getPref("getBoolPref", PREF_BLOCKLIST_VIA_AMO, true);
-    const paths = loadFromXML ? [ FILE_BLOCKLIST ]
-                              : [ 'blocklist-addons.json', 'blocklist-plugins.json' ];
+    const paths = gBlocklistFromXML ? [FILE_BLOCKLIST]
+                                    : ['blocklist-addons.json', 'blocklist-plugins.json'];
     for (let path of paths) {
       let profPath = OS.Path.join(OS.Constants.Path.profileDir, path);
       try {
@@ -927,7 +930,7 @@ Blocklist.prototype = {
 #      </certItems>
 #    </blocklist>
    */
-  _loadBlocklistFromString : function(text) {
+  _loadBlocklistFromXMLString : function(text) {
     try {
       var parser = Cc["@mozilla.org/xmlextras/domparser;1"].
                    createInstance(Ci.nsIDOMParser);
