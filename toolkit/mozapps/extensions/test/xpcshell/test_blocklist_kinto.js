@@ -2,7 +2,8 @@ const { classes: Cc, interfaces: Ci, utils: Cu } = Components;
 
 const PREF_BLOCKLIST_VIA_AMO = "security.blocklist.via.amo";
 const TEST_APP_ID            = "xpcshell@tests.mozilla.org";
-
+const KEY_PROFILEDIR                  = "ProfD";
+const KEY_APPDIR                      = "XCurProcD";
 const console = (Cu.import("resource://gre/modules/Console.jsm", {})).console;
 
 
@@ -117,6 +118,7 @@ add_task(function* test_addon_entry_from_json_without_blockid() {
 });
 
 
+/*
 add_task(function* test_plugin_entry_from_json_simple() {
   const blocklist = Blocklist();
   const data = Object.assign({}, SAMPLE_PLUGIN_RECORD);
@@ -134,7 +136,7 @@ add_task(function* test_plugin_entry_from_json_simple() {
   do_check_eq(item.targetApps["{ec8030f7-c20a-464f-9b0e-13a3a9e97384}"].minVersion, "0.1");
   do_check_eq(item.targetApps["{ec8030f7-c20a-464f-9b0e-13a3a9e97384}"].maxVersion, "17.*");
 });
-
+*/
 
 add_task(function* test_plugin_entry_from_json_no_match() {
   const blocklist = Blocklist();
@@ -207,12 +209,55 @@ add_task(function* test_relies_on_handle_json_methods() {
 //   do_check_false(blocklist._isBlocklistLoaded());
 // });
 
-// add_test(function* test_read_json_from_app_or_profile() {
+
+// name can be addons or plugins
+function clearBlocklists(name) {
+  let filename = "blocklist-" + name + ".json";
+  let blocklist = FileUtils.getFile(KEY_APPDIR, [filename]);
+  if (blocklist.exists())
+    blocklist.remove(true);
+
+  blocklist = FileUtils.getFile(KEY_PROFILEDIR, [filename]);
+  if (blocklist.exists())
+    blocklist.remove(true);
+}
+
+function reloadBlocklist() {
+  Services.prefs.setBoolPref(PREF_BLOCKLIST_ENABLED, false);
+  Services.prefs.setBoolPref(PREF_BLOCKLIST_ENABLED, true);
+}
+
+function copyToApp(file, name) {
+  let filename = "blocklist-" + name + ".json";
+  file.clone().copyTo(gAppDir, filename);
+}
+
+function copyToProfile(file, tstamp, name) {
+  let filename = "blocklist-" + name + ".json";
+  file = file.clone();
+  file.copyTo(gProfD, filename);
+  file = gProfD.clone();
+  file.append(filename);
+  file.lastModifiedTime = tstamp;
+}
+
+const OLD = do_get_file("data/test_blocklist_kinto/old.json");
+const NEW = do_get_file("data/test_blocklist_kinto/new.json");
+const OLD_TSTAMP = 1296046918000;
+const NEW_TSTAMP = 1396046918000;
+
+
+add_task(function* test_read_json_from_app_or_profile() {
 //   // addon in app  / plugins in app
 //   // addon in prof / plugins in app
 //   // addon in app  / plugins in prof
 //   // addon in prof / plugins in prof
-// });
+  clearBlocklists("addons");
+  copyToApp(OLD, "addons");
+  copyToProfile(NEW, NEW_TSTAMP, "addons");
+
+
+});
 
 // add_test(function* test_invalid_json() {
 // });
