@@ -1,6 +1,22 @@
 {
     "data": [
         {
+            "blockID": "i53923",
+            "guid": "LionKiller@jetpack",
+            "id": "9d500963-d45e-3a91-6e32-66f3811b99cc",
+            "last_modified": 1457434774040,
+            "prefs": [],
+            "versionRange": [
+                {
+                    "maxVersion": "*",
+                    "minVersion": "0",
+                    "severity": "3",
+                    "targetApplication": []
+                }
+            ]
+        },
+
+        {
             "blockID": "i539",
             "guid": "ScorpionSaver@jetpack",
             "id": "9d500963-d80e-3a91-6e74-66f3811b99cc",
