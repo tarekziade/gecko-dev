@@ -5,6 +5,11 @@ const TEST_APP_ID            = "xpcshell@tests.mozilla.org";
 const KEY_PROFILEDIR                  = "ProfD";
 const KEY_APPDIR                      = "XCurProcD";
 const console = (Cu.import("resource://gre/modules/Console.jsm", {})).console;
+const gAppDir = FileUtils.getFile(KEY_APPDIR, []);
+const OLD = do_get_file("data/test_blocklist_kinto/old.json");
+const NEW = do_get_file("data/test_blocklist_kinto/new.json");
+const OLD_TSTAMP = 1296046918000;
+const NEW_TSTAMP = 1396046918000;
 
 
 const SAMPLE_ADDON_RECORD = {
@@ -186,6 +191,8 @@ add_task(function* test_is_loaded_synchronously() {
 
 
 add_task(function* test_relies_on_handle_json_methods() {
+ copyToApp(OLD, "addons");
+
   const blocklist = Blocklist();
   const sample = {sentinel: true};
   blocklist._handleAddonItemJSON = () => sample;
@@ -241,10 +248,6 @@ function copyToProfile(file, tstamp, name) {
   file.lastModifiedTime = tstamp;
 }
 
-const OLD = do_get_file("data/test_blocklist_kinto/old.json");
-const NEW = do_get_file("data/test_blocklist_kinto/new.json");
-const OLD_TSTAMP = 1296046918000;
-const NEW_TSTAMP = 1396046918000;
 
 
 add_task(function* test_read_json_from_app_or_profile() {
@@ -252,12 +255,13 @@ add_task(function* test_read_json_from_app_or_profile() {
 //   // addon in prof / plugins in app
 //   // addon in app  / plugins in prof
 //   // addon in prof / plugins in prof
+
   clearBlocklists("addons");
   copyToApp(OLD, "addons");
   copyToProfile(NEW, NEW_TSTAMP, "addons");
 
-
 });
+
 
 // add_test(function* test_invalid_json() {
 // });
