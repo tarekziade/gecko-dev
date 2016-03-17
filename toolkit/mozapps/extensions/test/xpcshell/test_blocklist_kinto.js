@@ -190,20 +190,28 @@ add_task(function* test_is_loaded_synchronously() {
 });
 
 
-/* XXX need to unpatch
 add_task(function* test_relies_on_handle_json_methods() {
   copyToApp(OLD, "addons");
   const blocklist = Blocklist();
   const sample = {sentinel: true};
+
+  // mocking the handlers
+  let old_handleAddonItemJSON = blocklist._handleAddonItemJSON;
+  let old_handlePluginItemJSON = blocklist._handlePluginItemJSON;
   blocklist._handleAddonItemJSON = () => sample;
   blocklist._handlePluginItemJSON = () => sample;
 
-  blocklist._loadBlocklist();
-
-  do_check_eq(blocklist._addonEntries[0], sample);
-  do_check_eq(blocklist._pluginEntries[0], sample);
+  try {
+    blocklist._loadBlocklist();
+    do_check_eq(blocklist._addonEntries[0], sample);
+    do_check_eq(blocklist._pluginEntries[0], sample);
+  }
+  finally {
+    blocklist._handleAddonItemJSON = old_handleAddonItemJSON;
+    blocklist._handlePluginItemJSON = old_handlePluginItemJSON;
+  }
+ 
 });
-*/
 
 // add_test(function* test_notify_does_not_download_xml_file() {
 //   const blocklist = IBlocklist();
