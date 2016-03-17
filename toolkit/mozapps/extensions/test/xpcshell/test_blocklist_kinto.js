@@ -6,6 +6,7 @@ const KEY_PROFILEDIR                  = "ProfD";
 const KEY_APPDIR                      = "XCurProcD";
 const console = (Cu.import("resource://gre/modules/Console.jsm", {})).console;
 const gAppDir = FileUtils.getFile(KEY_APPDIR, []);
+const gProfDir = FileUtils.getFile(KEY_PROFILEDIR, []);
 const OLD = do_get_file("data/test_blocklist_kinto/old.json");
 const NEW = do_get_file("data/test_blocklist_kinto/new.json");
 const OLD_TSTAMP = 1296046918000;
@@ -235,14 +236,16 @@ function reloadBlocklist() {
 
 function copyToApp(file, name) {
   let filename = "blocklist-" + name + ".json";
-  file.clone().copyTo(gAppDir, filename);
+  file = file.clone();
+  file.copyTo(gAppDir, filename);
 }
+
 
 function copyToProfile(file, tstamp, name) {
   let filename = "blocklist-" + name + ".json";
   file = file.clone();
-  file.copyTo(gProfD, filename);
-  file = gProfD.clone();
+  file.copyTo(gProfDir, filename);
+  file = gProfDir.clone();
   file.append(filename);
   file.lastModifiedTime = tstamp;
 }
@@ -251,31 +254,30 @@ function copyToProfile(file, tstamp, name) {
 
 add_task(function* test_read_json_from_app_or_profile() {
   const blocklist = Blocklist();
+  copyToProfile(OLD, OLD_TSTAMP, "addons");
   blocklist._loadBlocklist();
   do_check_eq(blocklist._addonEntries.length, 416);
 
+  // reading from profile
   clearBlocklists("addons");
-  copyToApp(OLD, "addons");
   copyToProfile(NEW, NEW_TSTAMP, "addons");
-
   blocklist._loadBlocklist();
-
   // we should have one more
   do_check_eq(blocklist._addonEntries.length, 417);
 
-
-  // addon in app  / plugins in app
-  // addon in prof / plugins in app
-  // addon in app  / plugins in prof
-  // addon in prof / plugins in prof
-  // 
+  // reading from profile
+  clearBlocklists("addons");
+  copyToApp(OLD, "addons");
+  blocklist._loadBlocklist();
+  do_check_eq(blocklist._addonEntries.length, 416);
 });
 
 
-// add_test(function* test_invalid_json() {
+// add_task(function* test_invalid_json() {
+//
 // });
 
-// add_test(function* preload_json_async() {
+// add_task(function* preload_json_async() {
 //   // addon async / plugins sync
 //   // addon sync  / plugins sync
 //   // addon async / plugins async
