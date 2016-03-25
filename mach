@@ -8,7 +8,6 @@
 # the right python.
 '''which' python2.7 > /dev/null && exec python2.7 "$0" "$@" || exec python "$0" "$@"
 '''
-
 from __future__ import print_function, unicode_literals
 
 import os

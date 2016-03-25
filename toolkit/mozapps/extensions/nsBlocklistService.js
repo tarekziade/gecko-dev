@@ -1114,18 +1114,14 @@ Blocklist.prototype = {
   _handleGfxBlacklistNode: function (blocklistElement, result) {
     const blockEntry = {};
 
-    const ATTRIBUTES = ["os", "osversion", "devices", "vendor", "feature", "featureStatus",
-                        "driverVersion", "driverVersionMax", "driverVersionComparator",
-                        "model", "product", "manufacturer", "hardware"];
     for (var i = 0; i < blocklistElement.childNodes.length; ++i) {
       var matchElement = blocklistElement.childNodes.item(i);
       if (!(matchElement instanceof Ci.nsIDOMElement))
         continue;
-      if (ATTRIBUTES.indexOf(matchElement.localName) < 0)
-        continue;
 
       let value;
-      if (matchElement.localName == "devices") {
+      // we have a subset of nodes, value will be a list
+      if (matchElement.childNodes.length > 0) {
         value = [];
         for (var j = 0; j < matchElement.childNodes.length; j++) {
           var deviceElement = matchElement.childNodes.item(j);
